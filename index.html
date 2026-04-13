@@ -117,12 +117,20 @@ function generarTablaDesdeLayer(layer) {
     });
 }
 
-// Esperar a que cargue el mapa
-setTimeout(() => {
-    if (typeof lyr_PadrnRP_1 !== "undefined") {
+function esperarYGenerarTabla() {
+    if (
+        typeof lyr_PadrnRP_1 !== "undefined" &&
+        lyr_PadrnRP_1.getSource() &&
+        lyr_PadrnRP_1.getSource().getFeatures().length > 0
+    ) {
         generarTablaDesdeLayer(lyr_PadrnRP_1);
+    } else {
+        setTimeout(esperarYGenerarTabla, 500);
     }
-}, 1000);
+}
+
+// iniciar
+esperarYGenerarTabla();
 
 </script>
     </body>
