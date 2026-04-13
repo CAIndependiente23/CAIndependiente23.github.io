@@ -93,12 +93,32 @@ function generarTablaDesdeLayer(layer) {
     if (!features.length) return;
 
     const props = features[0].getProperties();
-    const campos = Object.keys(props).filter(k => k !== 'geometry');
-
+    const campos = [
+    'N�RP',
+    'Datos_Zona',
+    'Datos_COM',
+    'Datos_CALLE',
+    'Datos_INICIO',
+    'Datos_FIN',
+    'Datos_Fecha de limpieza',
+    'Datos_Fecha de verificaci�n',
+    'Datos_Foto'
+];
+    const alias = {
+    'N�RP': 'N° RP',
+    'Datos_Zona': 'Zona',
+    'Datos_COM': 'Comuna',
+    'Datos_CALLE': 'Calle',
+    'Datos_INICIO': 'Inicio',
+    'Datos_FIN': 'Fin',
+    'Datos_Fecha de limpieza': 'Fecha de limpieza',
+    'Datos_Fecha de verificaci�n': 'Fecha de verificación',
+    'Datos_Foto': 'Foto'
+};
     // Encabezado
     campos.forEach(campo => {
         let th = document.createElement("th");
-        th.textContent = campo;
+        th.textContent = alias[campo] || campo;
         encabezado.appendChild(th);
     });
 
@@ -109,7 +129,15 @@ function generarTablaDesdeLayer(layer) {
 
         campos.forEach(campo => {
             let td = document.createElement("td");
-            td.textContent = propiedades[campo];
+            if (campo === 'Datos_Foto' && propiedades[campo]) {
+    let link = document.createElement("a");
+    link.href = propiedades[campo];
+    link.target = "_blank";
+    link.textContent = "Ver foto";
+    td.appendChild(link);
+} else {
+    td.textContent = propiedades[campo];
+}
             tr.appendChild(td);
         });
 
