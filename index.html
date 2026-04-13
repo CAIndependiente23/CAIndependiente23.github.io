@@ -59,7 +59,7 @@ html, body {
                 <div id="popup-content"></div>
             </div>
         </div>
-        <h2 style="color:red;">MI TABLA PERSONALIZADA</h2>
+        <h2>RESUMEN</h2>
 
 <table id="tabla-datos" border="1" style="border-collapse: collapse; width: 100%;">
     <thead>
@@ -88,8 +88,33 @@ function generarTablaDesdeLayer(layer) {
     tabla.innerHTML = "";
     encabezado.innerHTML = "";
 
-    const features = layer.getSource().getFeatures();
+   const features = layer.getSource().getFeatures();
 
+// ORDENAR
+features.sort((a, b) => {
+    const propA = a.getProperties();
+    const propB = b.getProperties();
+
+    // Zona
+    const zonaA = propA['Datos_Zona'] || '';
+    const zonaB = propB['Datos_Zona'] || '';
+
+    const numZonaA = parseInt(zonaA.replace(/\D/g, '')) || 0;
+    const numZonaB = parseInt(zonaB.replace(/\D/g, '')) || 0;
+
+    if (numZonaA !== numZonaB) {
+        return numZonaA - numZonaB;
+    }
+
+    // N° RP
+    const rpA = propA['N�RP'] || '';
+    const rpB = propB['N�RP'] || '';
+
+    const numRpA = parseInt(rpA.split('-').pop()) || 0;
+    const numRpB = parseInt(rpB.split('-').pop()) || 0;
+
+    return numRpA - numRpB;
+});
     if (!features.length) return;
 
     const props = features[0].getProperties();
