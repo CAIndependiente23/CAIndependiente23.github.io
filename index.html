@@ -21,54 +21,17 @@ html, body {
     padding: 0;
 }
 
-/* MAPA */
+/* MAPA 70% */
 #map {
     width: 100%;
-    height: 100vh;
+    height: 70vh;
 }
 
-/* BOTÓN */
-#toggleTabla {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    z-index: 9999;
-    padding: 10px 15px;
+/* CONTENEDOR TABLA 30% */
+#tabla-contenedor {
+    height: 30vh;
+    overflow: auto;
     background: white;
-    border: 1px solid #ccc;
-    cursor: pointer;
-}
-
-/* SIDEBAR */
-#sidebar {
-    position: absolute;
-    top: 0;
-    left: -420px;
-    width: 400px;
-    height: 100vh;
-    background: white;
-    overflow-y: auto;
-    z-index: 9998;
-    padding: 15px;
-    transition: left 0.3s ease;
-    box-shadow: 2px 0 10px rgba(0,0,0,0.2);
-}
-
-#sidebar.abierto {
-    left: 0;
-}
-
-/* BUSCADOR */
-#searchBox {
-    width: 100%;
-    padding: 8px;
-    margin-bottom: 10px;
-}
-
-/* CONTADOR */
-#contador {
-    font-weight: bold;
-    margin: 10px 0;
 }
 
 /* TABLA */
@@ -81,11 +44,25 @@ td, th {
     border: 1px solid #ddd;
     padding: 5px;
     font-size: 12px;
+    white-space: nowrap;
 }
 
-tr:hover {
-    background: #f2f2f2;
-    cursor: pointer;
+/* encabezado fijo */
+thead th {
+    position: sticky;
+    top: 0;
+    background: #f4f4f4;
+    z-index: 2;
+}
+
+/* estilo general OL (lo tuyo intacto) */
+.ol-control > * {
+    background-color: #f8f8f8!important;
+    color: #444!important;
+    border-radius: 0px;
+}
+.ol-control {
+    background-color: rgba(255,255,255,.4)!important;
 }
 </style>
 
@@ -93,27 +70,6 @@ tr:hover {
 </head>
 
 <body>
-
-<!-- BOTÓN -->
-<button id="toggleTabla">☰ Resumen</button>
-
-<!-- SIDEBAR -->
-<div id="sidebar">
-
-    <h2>RESUMEN</h2>
-
-    <input type="text" id="searchBox" placeholder="Buscar...">
-
-    <div id="contador">Elementos: 0</div>
-
-    <table id="tabla-datos">
-        <thead>
-            <tr id="encabezado"></tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-
-</div>
 
 <!-- MAPA -->
 <div id="map">
@@ -123,7 +79,21 @@ tr:hover {
     </div>
 </div>
 
-<!-- LIBRERÍAS QGIS2WEB (NO TOCAR) -->
+<!-- TABLA -->
+<div id="tabla-contenedor">
+
+<h2 style="margin:10px;">RESUMEN</h2>
+
+<table id="tabla-datos">
+    <thead>
+        <tr id="encabezado"></tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+</div>
+
+<!-- SCRIPTS QGIS2WEB (NO TOCAR) -->
 <script src="resources/qgis2web_expressions.js"></script>
 <script src="./resources/functions.js"></script>
 <script src="./resources/ol.js"></script>
@@ -137,36 +107,8 @@ tr:hover {
 <script src="./resources/Autolinker.min.js"></script>
 <script src="./resources/qgis2web.js"></script>
 
-<!-- TU LÓGICA -->
 <script>
 
-let featuresGlobal = [];
-let mapRef = null;
-
-/* =========================
-   ESPERAR MAPA QGIS2WEB
-========================= */
-function esperarMapa() {
-    if (window.map) {
-        mapRef = window.map;
-    } else {
-        setTimeout(esperarMapa, 300);
-    }
-}
-esperarMapa();
-
-
-/* =========================
-   BOTÓN SIDEBAR
-========================= */
-document.getElementById("toggleTabla").addEventListener("click", () => {
-    document.getElementById("sidebar").classList.toggle("abierto");
-});
-
-
-/* =========================
-   GENERAR TABLA
-========================= */
 function generarTablaDesdeLayer(layer) {
 
     const tabla = document.querySelector("#tabla-datos tbody");
@@ -176,7 +118,6 @@ function generarTablaDesdeLayer(layer) {
     encabezado.innerHTML = "";
 
     let features = layer.getSource().getFeatures();
-    featuresGlobal = features;
 
     if (!features.length) return;
 
@@ -204,15 +145,15 @@ function generarTablaDesdeLayer(layer) {
         'Datos_Foto': 'Foto'
     };
 
-    /* HEADER */
+    /* encabezado */
     campos.forEach(c => {
         let th = document.createElement("th");
         th.textContent = alias[c] || c;
         encabezado.appendChild(th);
     });
 
-    /* ROWS */
-    features.forEach((f, i) => {
+    /* filas */
+    features.forEach(f => {
 
         let tr = document.createElement("tr");
         let props = f.getProperties();
@@ -233,61 +174,12 @@ function generarTablaDesdeLayer(layer) {
             tr.appendChild(td);
         });
 
-        /* CLICK → ZOOM */
-        tr.addEventListener("click", () => {
-
-            if (!mapRef) return;
-
-            let feature = featuresGlobal[i];
-            if (!feature || !feature.getGeometry()) return;
-
-            let extent = feature.getGeometry().getExtent();
-
-            mapRef.getView().fit(extent, {
-                duration: 800,
-                maxZoom: 18
-            });
-        });
-
         tabla.appendChild(tr);
     });
-
-    document.getElementById("contador").textContent =
-        "Elementos: " + featuresGlobal.length;
 }
 
-
-/* =========================
-   BUSCADOR
-========================= */
-document.getElementById("searchBox").addEventListener("input", function () {
-
-    let value = this.value.toLowerCase();
-    let rows = document.querySelectorAll("#tabla-datos tbody tr");
-
-    let visibles = 0;
-
-    rows.forEach(row => {
-        let text = row.textContent.toLowerCase();
-
-        if (text.includes(value)) {
-            row.style.display = "";
-            visibles++;
-        } else {
-            row.style.display = "none";
-        }
-    });
-
-    document.getElementById("contador").textContent =
-        "Mostrando: " + visibles + " / " + featuresGlobal.length;
-});
-
-
-/* =========================
-   ESPERAR LAYER
-========================= */
-function esperarLayer() {
-
+/* espera segura qgis2web */
+function esperarYGenerarTabla() {
     if (
         typeof lyr_PadrnRP_1 !== "undefined" &&
         lyr_PadrnRP_1.getSource() &&
@@ -295,11 +187,11 @@ function esperarLayer() {
     ) {
         generarTablaDesdeLayer(lyr_PadrnRP_1);
     } else {
-        setTimeout(esperarLayer, 500);
+        setTimeout(esperarYGenerarTabla, 500);
     }
 }
 
-esperarLayer();
+esperarYGenerarTabla();
 
 </script>
 
