@@ -16,6 +16,10 @@
 <link rel="stylesheet" href="./resources/qgis2web.css">
 
 <style>
+
+/* =========================
+   FULLSCREEN MAPA
+========================= */
 html, body {
     width: 100%;
     height: 100%;
@@ -23,13 +27,17 @@ html, body {
     padding: 0;
 }
 
-/* MAPA */
 #map {
-    width: 100%;
-    height: 60vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
 }
 
-/* BOTÓN */
+/* =========================
+   BOTÓN
+========================= */
 #btn-tabla {
     position: absolute;
     top: 10px;
@@ -41,7 +49,9 @@ html, body {
     cursor: pointer;
 }
 
-/* PANEL */
+/* =========================
+   PANEL LATERAL
+========================= */
 #panel-tabla {
     position: fixed;
     top: 0;
@@ -59,7 +69,9 @@ html, body {
     left: 0;
 }
 
-/* TABLA */
+/* =========================
+   TABLA
+========================= */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -107,7 +119,7 @@ thead th {
     </div>
 </div>
 
-<!-- QGIS2WEB SCRIPTS -->
+<!-- QGIS2WEB -->
 <script src="resources/qgis2web_expressions.js"></script>
 <script src="./resources/functions.js"></script>
 <script src="./resources/ol.js"></script>
@@ -125,7 +137,7 @@ thead th {
 <script>
 
 /* =========================
-   BOTÓN
+   BOTÓN PANEL
 ========================= */
 document.getElementById("btn-tabla").addEventListener("click", function () {
     document.getElementById("panel-tabla").classList.toggle("abierto");
@@ -133,22 +145,11 @@ document.getElementById("btn-tabla").addEventListener("click", function () {
 
 
 /* =========================
-   TABLA ORDENADA
+   ORDEN ZONA → RP
 ========================= */
-function generarTablaDesdeLayer(layer) {
+function ordenarFeatures(features) {
 
-    const tabla = document.querySelector("#tabla-datos tbody");
-    const encabezado = document.querySelector("#encabezado");
-
-    tabla.innerHTML = "";
-    encabezado.innerHTML = "";
-
-    let features = layer.getSource().getFeatures();
-
-    /* =========================
-       ORDEN: ZONA → RP
-    ========================= */
-    features.sort((a, b) => {
+    return features.sort((a, b) => {
 
         const pA = a.getProperties();
         const pB = b.getProperties();
@@ -161,12 +162,29 @@ function generarTablaDesdeLayer(layer) {
             return zonaA - zonaB;
         }
 
-        // N° RP (RP-Z1-1, RP-Z1-2...)
+        // RP (último número)
         const rpA = (pA['N�RP'] || '').split('-').pop();
         const rpB = (pB['N�RP'] || '').split('-').pop();
 
         return (parseInt(rpA) || 0) - (parseInt(rpB) || 0);
     });
+}
+
+
+/* =========================
+   TABLA
+========================= */
+function generarTablaDesdeLayer(layer) {
+
+    const tabla = document.querySelector("#tabla-datos tbody");
+    const encabezado = document.querySelector("#encabezado");
+
+    tabla.innerHTML = "";
+    encabezado.innerHTML = "";
+
+    let features = layer.getSource().getFeatures();
+
+    features = ordenarFeatures(features);
 
     if (!features.length) return;
 
@@ -194,14 +212,14 @@ function generarTablaDesdeLayer(layer) {
         'Datos_Foto': 'Foto'
     };
 
-    /* HEADER */
+    // HEADER
     campos.forEach(c => {
         let th = document.createElement("th");
         th.textContent = alias[c] || c;
         encabezado.appendChild(th);
     });
 
-    /* ROWS */
+    // ROWS
     features.forEach(f => {
 
         let tr = document.createElement("tr");
@@ -215,7 +233,7 @@ function generarTablaDesdeLayer(layer) {
                 let a = document.createElement("a");
                 a.href = p[campo];
                 a.target = "_blank";
-                a.textContent = "Ver foto";
+                a.textContent = "Ver";
                 td.appendChild(a);
             } else {
                 td.textContent = p[campo] || "";
