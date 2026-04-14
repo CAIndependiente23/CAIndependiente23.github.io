@@ -1,43 +1,19 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
-        <meta name="mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-capable" content="yes">
-        <link rel="stylesheet" href="./resources/ol.css">
-        <link rel="stylesheet" href="resources/fontawesome-all.min.css">
-        <link rel="stylesheet" type="text/css" href="resources/horsey.min.css">
-        <link rel="stylesheet" type="text/css" href="resources/ol-search-layer.min.css">
-        <link href="resources/photon-geocoder-autocomplete.min.css" rel="stylesheet">
-        <link rel="stylesheet" href="./resources/ol-layerswitcher.css">
-        <link rel="stylesheet" href="./resources/qgis2web.css">
-        <style>
-        html, body {
-            background-color: #ffffff;
-        }
-        .ol-control > * {
-            background-color: #f8f8f8!important;
-            color: #444444!important;
-            border-radius: 0px;
-        }
-        .ol-attribution a, .gcd-gl-input::placeholder, .search-layer-input-search::placeholder {
-            color: #444444!important;
-        }
-        .search-layer-input-search {
-            background-color: #f8f8f8!important;
-        }
-        .ol-control > *:focus, .ol-control >*:hover {
-            background-color: rgba(248, 248, 248, 0.7)!important;
-        } 
-        .ol-control {
-            background-color: rgba(255,255,255,.4) !important;
-            padding: 2px !important;
-        } 
-        </style>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
 
-        <style>
+<link rel="stylesheet" href="./resources/ol.css">
+<link rel="stylesheet" href="resources/fontawesome-all.min.css">
+<link rel="stylesheet" type="text/css" href="resources/horsey.min.css">
+<link rel="stylesheet" type="text/css" href="resources/ol-search-layer.min.css">
+<link href="resources/photon-geocoder-autocomplete.min.css" rel="stylesheet">
+<link rel="stylesheet" href="./resources/ol-layerswitcher.css">
+<link rel="stylesheet" href="./resources/qgis2web.css">
+
+<style>
 html, body {
     width: 100%;
     height: 100%;
@@ -45,131 +21,259 @@ html, body {
     padding: 0;
 }
 
+/* MAPA */
 #map {
     width: 100%;
-    height: 60vh; /* podés ajustar: 50vh, 70vh, etc */
+    height: 100vh;
 }
-        </style>
-        <title></title>
-    </head>
-    <body>
-        <div id="map">
-            <div id="popup" class="ol-popup">
-                <a href="#" id="popup-closer" class="ol-popup-closer"></a>
-                <div id="popup-content"></div>
-            </div>
-        </div>
-        <h2>RESUMEN</h2>
 
-<table id="tabla-datos" border="1" style="border-collapse: collapse; width: 100%;">
-    <thead>
-        <tr id="encabezado"></tr>
-    </thead>
-    <tbody></tbody>
-</table>
-        <script src="resources/qgis2web_expressions.js"></script>
-        <script src="./resources/functions.js"></script>
-        <script src="./resources/ol.js"></script>
-        <script src="resources/horsey.min.js"></script>
-        <script src="resources/ol-search-layer.js"></script>
-        <script src="./resources/ol-layerswitcher.js"></script>
-        <script src="resources/photon-geocoder-autocomplete.min.js"></script>
-        <script src="layers/PadrnRP_1.js"></script>
-        <script src="styles/PadrnRP_1_style.js"></script>
-        <script src="./layers/layers.js" type="text/javascript"></script> 
-        <script src="./resources/Autolinker.min.js"></script>
-        <script src="./resources/qgis2web.js"></script>      
-        <script>
+/* BOTÓN */
+#toggleTabla {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 9999;
+    padding: 10px 15px;
+    background: #fff;
+    border: 1px solid #ccc;
+    cursor: pointer;
+}
 
+/* SIDEBAR */
+#sidebar {
+    position: absolute;
+    top: 0;
+    left: -420px;
+    width: 400px;
+    height: 100vh;
+    background: white;
+    overflow-y: auto;
+    z-index: 9998;
+    padding: 15px;
+    transition: left 0.3s ease;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+}
+
+#sidebar.abierto {
+    left: 0;
+}
+
+/* BUSCADOR */
+#searchBox {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+}
+
+/* CONTADOR */
+#contador {
+    margin: 10px 0;
+    font-weight: bold;
+}
+
+/* TABLA */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+td, th {
+    border: 1px solid #ddd;
+    padding: 5px;
+    font-size: 12px;
+}
+</style>
+
+<title>Dashboard Pluvial</title>
+</head>
+
+<body>
+
+<button id="toggleTabla">☰ Resumen</button>
+
+<div id="sidebar">
+
+    <h2>RESUMEN</h2>
+
+    <input type="text" id="searchBox" placeholder="Buscar...">
+
+    <div id="contador">Elementos: 0</div>
+
+    <table id="tabla-datos">
+        <thead>
+            <tr id="encabezado"></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<div id="map">
+    <div id="popup" class="ol-popup">
+        <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+        <div id="popup-content"></div>
+    </div>
+</div>
+
+<!-- SCRIPTS BASE -->
+<script src="resources/ol.js"></script>
+<script src="layers/PadrnRP_1.js"></script>
+<script src="./layers/layers.js"></script>
+<script src="./resources/qgis2web.js"></script>
+
+<script>
+
+let featuresGlobal = [];
+
+/* =========================
+   SIDEBAR TOGGLE
+========================= */
+document.getElementById("toggleTabla").addEventListener("click", () => {
+    document.getElementById("sidebar").classList.toggle("abierto");
+});
+
+
+/* =========================
+   TABLA PRINCIPAL
+========================= */
 function generarTablaDesdeLayer(layer) {
+
     const tabla = document.querySelector("#tabla-datos tbody");
     const encabezado = document.querySelector("#encabezado");
 
     tabla.innerHTML = "";
     encabezado.innerHTML = "";
 
-   const features = layer.getSource().getFeatures();
+    let features = layer.getSource().getFeatures();
+    featuresGlobal = features;
 
-// ORDENAR
-features.sort((a, b) => {
-    const propA = a.getProperties();
-    const propB = b.getProperties();
+    /* ORDEN */
+    features.sort((a, b) => {
+        const pA = a.getProperties();
+        const pB = b.getProperties();
 
-    // Zona
-    const zonaA = propA['Datos_Zona'] || '';
-    const zonaB = propB['Datos_Zona'] || '';
+        const zonaA = parseInt((pA['Datos_Zona'] || '').replace(/\D/g, '')) || 0;
+        const zonaB = parseInt((pB['Datos_Zona'] || '').replace(/\D/g, '')) || 0;
 
-    const numZonaA = parseInt(zonaA.replace(/\D/g, '')) || 0;
-    const numZonaB = parseInt(zonaB.replace(/\D/g, '')) || 0;
+        if (zonaA !== zonaB) return zonaA - zonaB;
 
-    if (numZonaA !== numZonaB) {
-        return numZonaA - numZonaB;
-    }
+        const rpA = parseInt((pA['N�RP'] || '').split('-').pop()) || 0;
+        const rpB = parseInt((pB['N�RP'] || '').split('-').pop()) || 0;
 
-    // N° RP
-    const rpA = propA['N�RP'] || '';
-    const rpB = propB['N�RP'] || '';
+        return rpA - rpB;
+    });
 
-    const numRpA = parseInt(rpA.split('-').pop()) || 0;
-    const numRpB = parseInt(rpB.split('-').pop()) || 0;
-
-    return numRpA - numRpB;
-});
     if (!features.length) return;
 
-    const props = features[0].getProperties();
     const campos = [
-    'N�RP',
-    'Datos_Zona',
-    'Datos_COM',
-    'Datos_CALLE',
-    'Datos_INICIO',
-    'Datos_FIN',
-    'Datos_Fecha de limpieza',
-    'Datos_Fecha de verificaci�n',
-    'Datos_Foto'
-];
+        'N�RP',
+        'Datos_Zona',
+        'Datos_COM',
+        'Datos_CALLE',
+        'Datos_INICIO',
+        'Datos_FIN',
+        'Datos_Fecha de limpieza',
+        'Datos_Fecha de verificaci�n',
+        'Datos_Foto'
+    ];
+
     const alias = {
-    'N�RP': 'N° RP',
-    'Datos_Zona': 'Zona',
-    'Datos_COM': 'Comuna',
-    'Datos_CALLE': 'Calle',
-    'Datos_INICIO': 'Inicio',
-    'Datos_FIN': 'Fin',
-    'Datos_Fecha de limpieza': 'Fecha de limpieza',
-    'Datos_Fecha de verificaci�n': 'Fecha de verificación',
-    'Datos_Foto': 'Foto'
-};
-    // Encabezado
-    campos.forEach(campo => {
+        'N�RP': 'N° RP',
+        'Datos_Zona': 'Zona',
+        'Datos_COM': 'Comuna',
+        'Datos_CALLE': 'Calle',
+        'Datos_INICIO': 'Inicio',
+        'Datos_FIN': 'Fin',
+        'Datos_Fecha de limpieza': 'Limpieza',
+        'Datos_Fecha de verificaci�n': 'Verificación',
+        'Datos_Foto': 'Foto'
+    };
+
+    /* ENCABEZADO */
+    campos.forEach(c => {
         let th = document.createElement("th");
-        th.textContent = alias[campo] || campo;
+        th.textContent = alias[c] || c;
         encabezado.appendChild(th);
     });
 
-    // Filas
-    features.forEach(f => {
+    /* FILAS */
+    features.forEach((f, i) => {
+
         let tr = document.createElement("tr");
-        let propiedades = f.getProperties();
+        let props = f.getProperties();
+
+        tr.dataset.index = i;
 
         campos.forEach(campo => {
             let td = document.createElement("td");
-            if (campo === 'Datos_Foto' && propiedades[campo]) {
-    let link = document.createElement("a");
-    link.href = propiedades[campo];
-    link.target = "_blank";
-    link.textContent = "Ver foto";
-    td.appendChild(link);
-} else {
-    td.textContent = propiedades[campo];
-}
+
+            if (campo === "Datos_Foto" && props[campo]) {
+                let a = document.createElement("a");
+                a.href = props[campo];
+                a.target = "_blank";
+                a.textContent = "Ver";
+                td.appendChild(a);
+            } else {
+                td.textContent = props[campo] || "";
+            }
+
             tr.appendChild(td);
+        });
+
+        /* CLICK EN FILA → ZOOM */
+        tr.addEventListener("click", () => {
+            let feature = featuresGlobal[i];
+            let extent = feature.getGeometry().getExtent();
+            map.getView().fit(extent, {
+                duration: 800,
+                maxZoom: 18
+            });
         });
 
         tabla.appendChild(tr);
     });
+
+    actualizarContador();
 }
 
+
+/* =========================
+   BUSCADOR
+========================= */
+document.getElementById("searchBox").addEventListener("input", function () {
+
+    let value = this.value.toLowerCase();
+    let rows = document.querySelectorAll("#tabla-datos tbody tr");
+
+    let visibles = 0;
+
+    rows.forEach(row => {
+        let text = row.textContent.toLowerCase();
+
+        if (text.includes(value)) {
+            row.style.display = "";
+            visibles++;
+        } else {
+            row.style.display = "none";
+        }
+    });
+
+    document.getElementById("contador").textContent =
+        "Mostrando: " + visibles + " / " + featuresGlobal.length;
+});
+
+
+/* =========================
+   CONTADOR
+========================= */
+function actualizarContador() {
+    document.getElementById("contador").textContent =
+        "Elementos: " + featuresGlobal.length;
+}
+
+
+/* =========================
+   ESPERA CARGA LAYER
+========================= */
 function esperarYGenerarTabla() {
     if (
         typeof lyr_PadrnRP_1 !== "undefined" &&
@@ -182,9 +286,9 @@ function esperarYGenerarTabla() {
     }
 }
 
-// iniciar
 esperarYGenerarTabla();
 
 </script>
-    </body>
+
+</body>
 </html>
