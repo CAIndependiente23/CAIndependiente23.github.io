@@ -34,7 +34,7 @@ html, body {
     left: 10px;
     z-index: 9999;
     padding: 10px 15px;
-    background: #fff;
+    background: white;
     border: 1px solid #ccc;
     cursor: pointer;
 }
@@ -67,8 +67,8 @@ html, body {
 
 /* CONTADOR */
 #contador {
-    margin: 10px 0;
     font-weight: bold;
+    margin: 10px 0;
 }
 
 /* TABLA */
@@ -82,15 +82,22 @@ td, th {
     padding: 5px;
     font-size: 12px;
 }
+
+tr:hover {
+    background: #f2f2f2;
+    cursor: pointer;
+}
 </style>
 
-<title>Dashboard Pluvial</title>
+<title>Mapa Pluvial</title>
 </head>
 
 <body>
 
+<!-- BOTÓN -->
 <button id="toggleTabla">☰ Resumen</button>
 
+<!-- SIDEBAR -->
 <div id="sidebar">
 
     <h2>RESUMEN</h2>
@@ -105,8 +112,10 @@ td, th {
         </thead>
         <tbody></tbody>
     </table>
+
 </div>
 
+<!-- MAPA -->
 <div id="map">
     <div id="popup" class="ol-popup">
         <a href="#" id="popup-closer" class="ol-popup-closer"></a>
@@ -114,18 +123,41 @@ td, th {
     </div>
 </div>
 
-<!-- SCRIPTS BASE -->
-<script src="resources/ol.js"></script>
+<!-- LIBRERÍAS QGIS2WEB (NO TOCAR) -->
+<script src="resources/qgis2web_expressions.js"></script>
+<script src="./resources/functions.js"></script>
+<script src="./resources/ol.js"></script>
+<script src="resources/horsey.min.js"></script>
+<script src="resources/ol-search-layer.js"></script>
+<script src="./resources/ol-layerswitcher.js"></script>
+<script src="resources/photon-geocoder-autocomplete.min.js"></script>
+
 <script src="layers/PadrnRP_1.js"></script>
 <script src="./layers/layers.js"></script>
+<script src="./resources/Autolinker.min.js"></script>
 <script src="./resources/qgis2web.js"></script>
 
+<!-- TU LÓGICA -->
 <script>
 
 let featuresGlobal = [];
+let mapRef = null;
 
 /* =========================
-   SIDEBAR TOGGLE
+   ESPERAR MAPA QGIS2WEB
+========================= */
+function esperarMapa() {
+    if (window.map) {
+        mapRef = window.map;
+    } else {
+        setTimeout(esperarMapa, 300);
+    }
+}
+esperarMapa();
+
+
+/* =========================
+   BOTÓN SIDEBAR
 ========================= */
 document.getElementById("toggleTabla").addEventListener("click", () => {
     document.getElementById("sidebar").classList.toggle("abierto");
@@ -133,7 +165,7 @@ document.getElementById("toggleTabla").addEventListener("click", () => {
 
 
 /* =========================
-   TABLA PRINCIPAL
+   GENERAR TABLA
 ========================= */
 function generarTablaDesdeLayer(layer) {
 
@@ -145,22 +177,6 @@ function generarTablaDesdeLayer(layer) {
 
     let features = layer.getSource().getFeatures();
     featuresGlobal = features;
-
-    /* ORDEN */
-    features.sort((a, b) => {
-        const pA = a.getProperties();
-        const pB = b.getProperties();
-
-        const zonaA = parseInt((pA['Datos_Zona'] || '').replace(/\D/g, '')) || 0;
-        const zonaB = parseInt((pB['Datos_Zona'] || '').replace(/\D/g, '')) || 0;
-
-        if (zonaA !== zonaB) return zonaA - zonaB;
-
-        const rpA = parseInt((pA['N�RP'] || '').split('-').pop()) || 0;
-        const rpB = parseInt((pB['N�RP'] || '').split('-').pop()) || 0;
-
-        return rpA - rpB;
-    });
 
     if (!features.length) return;
 
@@ -188,20 +204,18 @@ function generarTablaDesdeLayer(layer) {
         'Datos_Foto': 'Foto'
     };
 
-    /* ENCABEZADO */
+    /* HEADER */
     campos.forEach(c => {
         let th = document.createElement("th");
         th.textContent = alias[c] || c;
         encabezado.appendChild(th);
     });
 
-    /* FILAS */
+    /* ROWS */
     features.forEach((f, i) => {
 
         let tr = document.createElement("tr");
         let props = f.getProperties();
-
-        tr.dataset.index = i;
 
         campos.forEach(campo => {
             let td = document.createElement("td");
@@ -219,11 +233,17 @@ function generarTablaDesdeLayer(layer) {
             tr.appendChild(td);
         });
 
-        /* CLICK EN FILA → ZOOM */
+        /* CLICK → ZOOM */
         tr.addEventListener("click", () => {
+
+            if (!mapRef) return;
+
             let feature = featuresGlobal[i];
+            if (!feature || !feature.getGeometry()) return;
+
             let extent = feature.getGeometry().getExtent();
-            map.getView().fit(extent, {
+
+            mapRef.getView().fit(extent, {
                 duration: 800,
                 maxZoom: 18
             });
@@ -232,7 +252,8 @@ function generarTablaDesdeLayer(layer) {
         tabla.appendChild(tr);
     });
 
-    actualizarContador();
+    document.getElementById("contador").textContent =
+        "Elementos: " + featuresGlobal.length;
 }
 
 
@@ -263,18 +284,10 @@ document.getElementById("searchBox").addEventListener("input", function () {
 
 
 /* =========================
-   CONTADOR
+   ESPERAR LAYER
 ========================= */
-function actualizarContador() {
-    document.getElementById("contador").textContent =
-        "Elementos: " + featuresGlobal.length;
-}
+function esperarLayer() {
 
-
-/* =========================
-   ESPERA CARGA LAYER
-========================= */
-function esperarYGenerarTabla() {
     if (
         typeof lyr_PadrnRP_1 !== "undefined" &&
         lyr_PadrnRP_1.getSource() &&
@@ -282,11 +295,11 @@ function esperarYGenerarTabla() {
     ) {
         generarTablaDesdeLayer(lyr_PadrnRP_1);
     } else {
-        setTimeout(esperarYGenerarTabla, 500);
+        setTimeout(esperarLayer, 500);
     }
 }
 
-esperarYGenerarTabla();
+esperarLayer();
 
 </script>
 
