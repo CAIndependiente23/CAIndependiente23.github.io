@@ -4,34 +4,36 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 
 <link rel="stylesheet" href="./resources/ol.css">
 <link rel="stylesheet" href="resources/fontawesome-all.min.css">
+<link rel="stylesheet" type="text/css" href="resources/horsey.min.css">
+<link rel="stylesheet" type="text/css" href="resources/ol-search-layer.min.css">
+<link href="resources/photon-geocoder-autocomplete.min.css" rel="stylesheet">
 <link rel="stylesheet" href="./resources/ol-layerswitcher.css">
 <link rel="stylesheet" href="./resources/qgis2web.css">
 
 <style>
-
-/* =========================
-   FULL MAPA
-========================= */
 html, body {
+    background-color: #ffffff;
     width: 100%;
     height: 100%;
     margin: 0;
     padding: 0;
 }
 
+/* =========================
+   MAPA ORIGINAL (NO ROMPER)
+========================= */
 #map {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0; /* FULL SCREEN */
+    width: 100%;
+    height: 60vh;
 }
 
 /* =========================
-   BOTÓN
+   BOTÓN PANEL
 ========================= */
 #btn-tabla {
     position: absolute;
@@ -45,53 +47,44 @@ html, body {
 }
 
 /* =========================
-   OVERLAY FULL SCREEN LISTADO
+   PANEL LATERAL (OCULTO)
 ========================= */
 #panel-tabla {
-    position: absolute;
+    position: fixed;
     top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: -450px;
+    width: 420px;
+    height: 100vh;
     background: white;
     z-index: 9998;
-    display: none;
     overflow: auto;
-    padding: 10px;
+    transition: left 0.3s ease;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.2);
 }
 
-/* cuando está activo */
+/* ABIERTO */
 #panel-tabla.abierto {
-    display: block;
+    left: 0;
 }
 
 /* =========================
    TABLA
 ========================= */
 table {
-    width: max-content; /* permite TODAS las columnas */
+    width: 100%;
     border-collapse: collapse;
-    min-width: 100%;
 }
 
 td, th {
     border: 1px solid #ddd;
-    padding: 6px;
+    padding: 5px;
     font-size: 12px;
     white-space: nowrap;
 }
 
 thead th {
-    position: sticky;
-    top: 0;
-    background: #f2f2f2;
-    z-index: 2;
+    background: #f4f4f4;
 }
-
-h2 {
-    margin: 10px 0;
-}
-
 </style>
 
 <title>Mapa Pluvial</title>
@@ -102,10 +95,10 @@ h2 {
 <!-- BOTÓN -->
 <button id="btn-tabla">☰ Listado</button>
 
-<!-- PANEL FULL SCREEN -->
+<!-- PANEL -->
 <div id="panel-tabla">
 
-<h2>RESUMEN</h2>
+<h2 style="margin:10px;">RESUMEN</h2>
 
 <table id="tabla-datos">
     <thead>
@@ -117,12 +110,26 @@ h2 {
 </div>
 
 <!-- MAPA -->
-<div id="map"></div>
+<div id="map">
+    <div id="popup" class="ol-popup">
+        <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+        <div id="popup-content"></div>
+    </div>
+</div>
 
-<!-- LIBRERÍAS QGIS2WEB -->
+<!-- SCRIPTS QGIS2WEB (NO TOCAR) -->
+<script src="resources/qgis2web_expressions.js"></script>
+<script src="./resources/functions.js"></script>
 <script src="./resources/ol.js"></script>
-<script src="./layers/PadrnRP_1.js"></script>
+<script src="resources/horsey.min.js"></script>
+<script src="resources/ol-search-layer.js"></script>
+<script src="./resources/ol-layerswitcher.js"></script>
+<script src="resources/photon-geocoder-autocomplete.min.js"></script>
+
+<script src="layers/PadrnRP_1.js"></script>
+<script src="styles/PadrnRP_1_style.js"></script>
 <script src="./layers/layers.js"></script>
+<script src="./resources/Autolinker.min.js"></script>
 <script src="./resources/qgis2web.js"></script>
 
 <script>
@@ -136,34 +143,9 @@ document.getElementById("btn-tabla").addEventListener("click", function () {
 
 
 /* =========================
-   ORDEN ZONA + RP
+   GENERAR TABLA
 ========================= */
-function ordenarFeatures(features) {
-
-    return features.sort((a, b) => {
-
-        const pA = a.getProperties();
-        const pB = b.getProperties();
-
-        // ---- ZONA (Z1, Z2, Z10...)
-        const zonaA = parseInt((pA['Datos_Zona'] || '').replace(/\D/g, '')) || 0;
-        const zonaB = parseInt((pB['Datos_Zona'] || '').replace(/\D/g, '')) || 0;
-
-        if (zonaA !== zonaB) return zonaA - zonaB;
-
-        // ---- N° RP (RP-Z1-1, RP-Z1-2...)
-        const rpA = (pA['N�RP'] || '').split('-').pop();
-        const rpB = (pB['N�RP'] || '').split('-').pop();
-
-        return (parseInt(rpA) || 0) - (parseInt(rpB) || 0);
-    });
-}
-
-
-/* =========================
-   TABLA
-========================= */
-function generarTabla(layer) {
+function generarTablaDesdeLayer(layer) {
 
     const tabla = document.querySelector("#tabla-datos tbody");
     const encabezado = document.querySelector("#encabezado");
@@ -171,9 +153,9 @@ function generarTabla(layer) {
     tabla.innerHTML = "";
     encabezado.innerHTML = "";
 
-    let features = layer.getSource().getFeatures();
+    const features = layer.getSource().getFeatures();
 
-    features = ordenarFeatures(features);
+    if (!features.length) return;
 
     const campos = [
         'N�RP',
@@ -194,36 +176,35 @@ function generarTabla(layer) {
         'Datos_CALLE': 'Calle',
         'Datos_INICIO': 'Inicio',
         'Datos_FIN': 'Fin',
-        'Datos_Fecha de limpieza': 'Limpieza',
-        'Datos_Fecha de verificaci�n': 'Verificación',
+        'Datos_Fecha de limpieza': 'Fecha de limpieza',
+        'Datos_Fecha de verificaci�n': 'Fecha de verificación',
         'Datos_Foto': 'Foto'
     };
 
-    // encabezado
-    campos.forEach(c => {
+    /* HEADER */
+    campos.forEach(campo => {
         let th = document.createElement("th");
-        th.textContent = alias[c] || c;
+        th.textContent = alias[campo] || campo;
         encabezado.appendChild(th);
     });
 
-    // filas
+    /* ROWS */
     features.forEach(f => {
 
         let tr = document.createElement("tr");
-        let p = f.getProperties();
+        let props = f.getProperties();
 
         campos.forEach(campo => {
-
             let td = document.createElement("td");
 
-            if (campo === 'Datos_Foto' && p[campo]) {
+            if (campo === 'Datos_Foto' && props[campo]) {
                 let a = document.createElement("a");
-                a.href = p[campo];
+                a.href = props[campo];
                 a.target = "_blank";
-                a.textContent = "Ver";
+                a.textContent = "Ver foto";
                 td.appendChild(a);
             } else {
-                td.textContent = p[campo] || "";
+                td.textContent = props[campo] || "";
             }
 
             tr.appendChild(td);
@@ -235,22 +216,22 @@ function generarTabla(layer) {
 
 
 /* =========================
-   ESPERAR LAYER QGIS2WEB
+   ESPERAR CARGA LAYER
 ========================= */
-function esperar() {
+function esperarYGenerarTabla() {
 
     if (
         typeof lyr_PadrnRP_1 !== "undefined" &&
         lyr_PadrnRP_1.getSource() &&
         lyr_PadrnRP_1.getSource().getFeatures().length > 0
     ) {
-        generarTabla(lyr_PadrnRP_1);
+        generarTablaDesdeLayer(lyr_PadrnRP_1);
     } else {
-        setTimeout(espero, 500);
+        setTimeout(esperarYGenerarTabla, 500);
     }
 }
 
-esperar();
+esperarYGenerarTabla();
 
 </script>
 
