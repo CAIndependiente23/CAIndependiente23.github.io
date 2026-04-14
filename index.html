@@ -14,24 +14,36 @@
 <link rel="stylesheet" href="./resources/qgis2web.css">
 
 <style>
+
+/* IMPORTANTE: estructura compatible con qgis2web */
+
 html, body {
-    width: 100%;
-    height: 100%;
     margin: 0;
     padding: 0;
-}
-
-/* MAPA 70% */
-#map {
     width: 100%;
-    height: 70vh;
+    height: 100%;
 }
 
-/* CONTENEDOR TABLA 30% */
+/* MAPA (ocupa 70%) */
+#map {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 30%;
+}
+
+/* TABLA (30% inferior) */
 #tabla-contenedor {
-    height: 30vh;
-    overflow: auto;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30%;
     background: white;
+    overflow: auto;
+    border-top: 2px solid #ccc;
+    z-index: 9999;
 }
 
 /* TABLA */
@@ -47,7 +59,6 @@ td, th {
     white-space: nowrap;
 }
 
-/* encabezado fijo */
 thead th {
     position: sticky;
     top: 0;
@@ -55,15 +66,15 @@ thead th {
     z-index: 2;
 }
 
-/* estilo general OL (lo tuyo intacto) */
+/* estilo qgis2web (no tocar mucho) */
 .ol-control > * {
     background-color: #f8f8f8!important;
     color: #444!important;
-    border-radius: 0px;
 }
 .ol-control {
     background-color: rgba(255,255,255,.4)!important;
 }
+
 </style>
 
 <title>Mapa Pluvial</title>
@@ -82,7 +93,7 @@ thead th {
 <!-- TABLA -->
 <div id="tabla-contenedor">
 
-<h2 style="margin:10px;">RESUMEN</h2>
+<h3 style="margin:5px;">RESUMEN</h3>
 
 <table id="tabla-datos">
     <thead>
@@ -109,6 +120,9 @@ thead th {
 
 <script>
 
+/* =========================
+   GENERAR TABLA
+========================= */
 function generarTablaDesdeLayer(layer) {
 
     const tabla = document.querySelector("#tabla-datos tbody");
@@ -178,8 +192,11 @@ function generarTablaDesdeLayer(layer) {
     });
 }
 
-/* espera segura qgis2web */
+/* =========================
+   ESPERAR CARGA LAYER
+========================= */
 function esperarYGenerarTabla() {
+
     if (
         typeof lyr_PadrnRP_1 !== "undefined" &&
         lyr_PadrnRP_1.getSource() &&
